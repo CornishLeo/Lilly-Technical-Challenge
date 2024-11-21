@@ -1,1 +1,182 @@
 
+# Objective 1
+
+    ## Code for query
+    import pandas as pd
+
+    resultsTable = pd.read_csv("results.csv")
+
+    resultsTable['date'] = pd.to_datetime(resultsTable['date'])
+
+    resultsTable['year'] = resultsTable['date'].dt.year
+
+    filtered_results = resultsTable[(resultsTable['year'] >= 1900) & (resultsTable['year'] <= 2000)][['year', 'home_score', 'away_score']]
+
+    filtered_results.loc[:, 'total_goals'] = filtered_results['home_score'] + filtered_results['away_score']
+
+    scoreMean = filtered_results['total_goals'].mean()
+
+    print(f'Average goals scored between the years 1900 and 2000 is {scoreMean:.2f}')
+
+    ## Result (to 2dp)
+
+    Average goals scored between the years 1900 and 2000 is 3.07
+
+# Objective 2
+
+    ## Code for query
+    import pandas as pd
+
+    shootoutsTable = pd.read_csv("shootouts.csv")
+
+    winner_counts = shootoutsTable["winner"].value_counts().sort_index()
+    print(winner_counts)
+
+    ## Result (Head and tail)
+
+    winner
+    Abkhazia                2
+    Algeria                 7
+    Angola                  7
+    Antigua and Barbuda     2
+    Argentina              14
+                        ..
+    Zambia                 13
+    Zanzibar                2
+    Zimbabwe                7
+    Åland                   1
+    Åland Islands           2
+    Name: count, Length: 163, dtype: int64
+
+# Objective 3
+
+    ## Code for query
+
+    goalScorersTable = pd.read_csv("goalscorers.csv")
+    goalScorersTable['date'] = pd.to_datetime(goalScorersTable['date'])
+    resultsTable = pd.read_csv("results.csv")
+    resultsTable['date'] = pd.to_datetime(resultsTable['date'])
+    shootoutsTable = pd.read_csv("shootouts.csv")
+    shootoutsTable['date'] = pd.to_datetime(shootoutsTable['date'])
+
+    goalScorersTable["match_id"] = (
+        goalScorersTable["date"].astype(str) + "_" +
+        goalScorersTable["home_team"].str.replace(" ", "_") + "_" + 
+        goalScorersTable["away_team"].str.replace(" ", "_")
+        )
+    resultsTable["match_id"] = (
+        resultsTable["date"].astype(str) + "_" +
+        resultsTable["home_team"].str.replace(" ", "_") + "_" + 
+        resultsTable["away_team"].str.replace(" ", "_")
+        )
+    shootoutsTable["match_id"] = (
+        shootoutsTable["date"].astype(str) + "_" +
+        shootoutsTable["home_team"].str.replace(" ", "_") + "_" + 
+        shootoutsTable["away_team"].str.replace(" ", "_")
+        )
+
+    goalScorersTable["goal_id"] = (
+        goalScorersTable["match_id"] + "_" +
+        goalScorersTable["minute"].astype(str)
+    )
+
+    print(resultsTable.head())
+
+    ## Results
+
+      date        home_team  away_team  home_score  away_score tournament    city  \
+    0 1872-11-30  Scotland   England           0           0   Friendly  Glasgow   
+    1 1873-03-08   England  Scotland           4           2   Friendly   London   
+    2 1874-03-07  Scotland   England           2           1   Friendly  Glasgow   
+    3 1875-03-06   England  Scotland           2           2   Friendly   London   
+    4 1876-03-04  Scotland   England           3           0   Friendly  Glasgow   
+
+        country  neutral                     match_id  
+    0  Scotland    False  1872-11-30_Scotland_England  
+    1   England    False  1873-03-08_England_Scotland  
+    2  Scotland    False  1874-03-07_Scotland_England  
+    3   England    False  1875-03-06_England_Scotland  
+    4  Scotland    False  1876-03-04_Scotland_England  
+
+# Objective 4
+
+    ## Code for query
+
+    mergedTable = shootoutsTable.merge(resultsTable, on="match_id", how="inner")
+
+    draw_1_1 = mergedTable[(mergedTable["home_score"] == 1) & (mergedTable["away_score"] == 1)]
+
+    shootout_winners_count = draw_1_1["winner"].value_counts()
+
+    print(shootout_winners_count)
+
+    ## Results (Head and tail)
+    winner
+    South Korea            7
+    Uruguay                7
+    Burkina Faso           6
+    Argentina              6
+    Mali                   5
+                        ..
+    Antigua and Barbuda    1
+    Zambia                 1
+    Cuba                   1
+    Sudan                  1
+    Åland                  1
+    Name: count, Length: 115, dtype: int64
+
+# Objective 5
+
+    ## Code for query
+
+    mergedTable = goalScorersTable.merge(resultsTable, on="match_id", how="inner")
+
+    goal_counts = mergedTable.groupby(['tournament', 'scorer']).size().reset_index(name='goals')
+
+    top_scorer = goal_counts.loc[goal_counts.groupby('tournament')['goals'].idxmax()]
+
+    total_goals_per_tournament = goal_counts.groupby('tournament')['goals'].sum().reset_index(name='total_goals')
+
+    top_scorer = top_scorer.merge(total_goals_per_tournament, on="tournament")
+
+    top_scorer['goal_percentage'] = (top_scorer['goals'] / top_scorer['total_goals']) * 100
+
+    print(top_scorer[['tournament', 'scorer', 'goals', 'total_goals', 'goal_percentage']])
+
+    ## Result
+
+                            tournament                   scorer  goals  \
+    0                    AFC Asian Cup                 Ali Daei     14   
+    1           African Cup of Nations             Samuel Eto'o     18   
+    2                       Baltic Cup          Ēriks Pētersons      9   
+    3        British Home Championship              Geoff Hurst      4   
+    4   CONMEBOL–UEFA Cup of Champions         Claudio Caniggia      1   
+    5               Confederations Cup        Cuauhtémoc Blanco      9   
+    6                     Copa América  Norberto Doroteo Méndez     17   
+    7                   FIFA World Cup           Miroslav Klose     16   
+    8     FIFA World Cup qualification              Carlos Ruiz     39   
+    9                         Gold Cup           Landon Donovan     18   
+    10               NAFC Championship        Luis de la Fuente      3   
+    11             Oceania Nations Cup              Damian Mori     14   
+    12                       UEFA Euro        Cristiano Ronaldo     14   
+    13         UEFA Euro qualification        Cristiano Ronaldo     41   
+    14             UEFA Nations League      Aleksandar Mitrović     14   
+
+        total_goals  goal_percentage  
+    0           987         1.418440  
+    1          1767         1.018676  
+    2           229         3.930131  
+    3            33        12.121212  
+    4             7        14.285714  
+    5           423         2.127660  
+    6          2671         0.636466  
+    7          2720         0.588235  
+    8         22738         0.171519  
+    9          1097         1.640839  
+    10           10        30.000000  
+    11          486         2.880658  
+    12          829         1.688782  
+    13         7958         0.515205  
+    14         1184         1.182432  
+
+
